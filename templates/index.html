@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dự Đoán Tiểu Đường AI</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<div class="container">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="badge">🧬 AI Powered</div>
+    <h1>Dự Đoán Tiểu Đường</h1>
+    <p>Nhập các chỉ số y tế để hệ thống AI phân tích nguy cơ mắc bệnh tiểu đường của bạn.</p>
+  </div>
+
+  <!-- FORM -->
+  <div class="form-card">
+    <h2>Nhập Chỉ Số Y Tế</h2>
+    <div class="grid">
+      <div class="field">
+        <label>Pregnancies</label>
+        <input id="preg" type="number" placeholder="0" min="0">
+        <span class="hint">Số lần mang thai</span>
+      </div>
+      <div class="field">
+        <label>Glucose (mg/dL)</label>
+        <input id="glu" type="number" placeholder="120" min="0">
+        <span class="hint">Nồng độ glucose huyết tương</span>
+      </div>
+      <div class="field">
+        <label>Blood Pressure (mm Hg)</label>
+        <input id="bp" type="number" placeholder="70" min="0">
+        <span class="hint">Huyết áp tâm trương</span>
+      </div>
+      <div class="field">
+        <label>Skin Thickness (mm)</label>
+        <input id="skin" type="number" placeholder="20" min="0">
+        <span class="hint">Độ dày nếp gấp da tam đầu</span>
+      </div>
+      <div class="field">
+        <label>Insulin (mu U/ml)</label>
+        <input id="ins" type="number" placeholder="80" min="0">
+        <span class="hint">Insulin huyết thanh 2 giờ</span>
+      </div>
+      <div class="field">
+        <label>BMI (kg/m²)</label>
+        <input id="bmi" type="number" placeholder="25.0" step="0.1" min="0">
+        <span class="hint">Chỉ số khối cơ thể</span>
+      </div>
+      <div class="field">
+        <label>DPF</label>
+        <input id="dpf" type="number" placeholder="0.350" step="0.001" min="0">
+        <span class="hint">Chỉ số di truyền tiểu đường</span>
+      </div>
+      <div class="field">
+        <label>Age (tuổi)</label>
+        <input id="age" type="number" placeholder="30" min="1">
+        <span class="hint">Tuổi</span>
+      </div>
+    </div>
+
+    <button class="btn-predict" onclick="predict()" id="btnPredict">
+      Phân Tích Nguy Cơ
+    </button>
+  </div>
+
+  <!-- RESULT SECTION -->
+  <div id="resultSection">
+
+    <!-- KẾT QUẢ CHÍNH -->
+    <div class="result-card" id="resultCard">
+      <div class="result-icon" id="resultIcon">🔍</div>
+      <div class="result-info" style="flex:1;">
+        <h2 id="ketluan">—</h2>
+        <div class="pct" id="pctDisplay">—</div>
+        <p id="resultDesc">—</p>
+        <div class="progress-wrap">
+          <div class="progress-bar" id="progressBar" style="width:0%"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BIỂU ĐỒ -->
+    <div class="charts-title">Phân Tích Chi Tiết</div>
+
+    <div class="charts-grid">
+      <div class="chart-card">
+        <h3>📊 Nguy Cơ Hiện Tại</h3>
+        <img id="chart1" alt="Biểu đồ nguy cơ">
+      </div>
+      <div class="chart-card">
+        <h3>🏆 So Sánh Thuật Toán</h3>
+        <img id="chart2" alt="Biểu đồ thuật toán">
+      </div>
+      <div class="chart-card chart-full">
+        <h3>📈 Lịch Sử Dự Đoán (Theo Thời Gian)</h3>
+        <img id="chart3" alt="Biểu đồ lịch sử">
+      </div>
+    </div>
+
+    <!-- BẢNG LỊCH SỬ -->
+    <div class="history-section" id="historySection">
+      <h3>📋 Các Lần Kiểm Tra Gần Đây</h3>
+      <div id="historyTable"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+async function predict(){
+    const btn = document.getElementById("btnPredict");
+
+    const ids = ['preg','glu','bp','skin','ins','bmi','dpf','age'];
+    for(let id of ids){
+        if(!document.getElementById(id).value){
+            alert("Vui lòng nhập đầy đủ tất cả các chỉ số!");
+            return;
+        }
+    }
+
+    btn.disabled = true;
+    btn.classList.add('loading');
+    btn.innerHTML = '<span class="spinner"></span>Đang phân tích...';
+
+    const data = {
+        pregnancies:   document.getElementById('preg').value,
+        glucose:       document.getElementById('glu').value,
+        bloodpressure: document.getElementById('bp').value,
+        skin:          document.getElementById('skin').value,
+        insulin:       document.getElementById('ins').value,
+        bmi:           document.getElementById('bmi').value,
+        dpf:           document.getElementById('dpf').value,
+        age:           document.getElementById('age').value
+    };
+
+    try {
+        const res = await fetch("/predict", {
+            method: "POST",
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        });
+
+        const kq = await res.json();
+
+        document.getElementById("resultSection").style.display = "block";
+
+        const card = document.getElementById("resultCard");
+        card.className = 'result-card';
+        const pct     = kq.percent;
+        const outcome = kq.outcome; // 0 hoặc 1
+
+        let cls, icon, desc;
+        if(outcome === 1){
+            cls  = 'high';
+            icon = '🔴';
+            desc = `Xác suất ${pct}% ≥ 50% — Hệ thống phân loại: Outcome = 1`;
+        } else {
+            cls  = 'low';
+            icon = '✅';
+            desc = `Xác suất ${pct}% < 50% — Hệ thống phân loại: Outcome = 0`;
+        }
+
+        card.classList.add(cls);
+        document.getElementById("resultIcon").textContent  = icon;
+        document.getElementById("ketluan").textContent     = kq.level;
+        document.getElementById("pctDisplay").textContent  = pct + "%";
+        document.getElementById("resultDesc").textContent  = desc;
+
+        setTimeout(() => {
+            document.getElementById("progressBar").style.width = pct + "%";
+        }, 100);
+
+        document.getElementById("chart1").src = "data:image/png;base64," + kq.chart1;
+        document.getElementById("chart2").src = "data:image/png;base64," + kq.chart2;
+        document.getElementById("chart3").src = "data:image/png;base64," + kq.chart3;
+
+        if(kq.history && kq.history.length > 0){
+            document.getElementById("historySection").style.display = "block";
+            renderHistory(kq.history);
+        }
+
+        document.getElementById("resultSection").scrollIntoView({behavior:'smooth', block:'start'});
+
+    } catch(e) {
+        alert("Lỗi kết nối đến server: " + e.message);
+    } finally {
+        btn.disabled = false;
+        btn.classList.remove('loading');
+        btn.innerHTML = 'Phân Tích Nguy Cơ';
+    }
+}
+
+function renderHistory(history) {
+    let html = `
+    <table style="width:100%;border-collapse:collapse;font-size:14px;">
+      <thead>
+        <tr style="border-bottom:1px solid var(--border);">
+          <th style="text-align:left;padding:10px 12px;color:var(--muted);font-weight:500;">#</th>
+          <th style="text-align:left;padding:10px 12px;color:var(--muted);font-weight:500;">Ngày / Giờ</th>
+          <th style="text-align:right;padding:10px 12px;color:var(--muted);font-weight:500;">% Nguy Cơ</th>
+          <th style="text-align:left;padding:10px 12px;color:var(--muted);font-weight:500;">Kết Quả</th>
+        </tr>
+      </thead>
+      <tbody>`;
+
+    history.slice(-10).reverse().forEach((row, i) => {
+        const pct     = parseFloat(row.risk);
+        const outcome = row.outcome !== undefined ? parseInt(row.outcome) : (pct >= 50 ? 1 : 0);
+        const color   = outcome === 1 ? '#ff6b6b' : '#00d4aa';
+        const label   = outcome === 1 ? 'Mắc (1)' : 'Không mắc (0)';
+
+        html += `
+        <tr style="border-bottom:1px solid rgba(48,54,61,0.5);">
+          <td style="padding:10px 12px;color:var(--muted);">${history.length - i}</td>
+          <td style="padding:10px 12px;">${row.time}</td>
+          <td style="padding:10px 12px;text-align:right;">
+            <span style="color:${color};font-weight:600;">${pct.toFixed(1)}%</span>
+          </td>
+          <td style="padding:10px 12px;">
+            <span style="background:${color}22;color:${color};padding:3px 10px;border-radius:20px;font-size:12px;">${label}</span>
+          </td>
+        </tr>`;
+    });
+
+    html += `</tbody></table>`;
+    document.getElementById("historyTable").innerHTML = html;
+}
+</script>
+</body>
+</html>
