@@ -1,8 +1,8 @@
 # 🩺 Hệ thống Dự đoán Bệnh Tiểu Đường
 
-**Thuật toán chính:** K-Nearest Neighbors (KNN, K=5)  
+**Thuật toán chính:** K-Nearest Neighbors (KNN, K=13)  
 **Dataset:** Pima Indians Diabetes Dataset (768 mẫu, 8 đặc trưng)  
-**Test Accuracy:** 90.26%
+**Test Accuracy:** 71.43%
 
 ---
 
@@ -96,8 +96,8 @@ Mở trình duyệt: http://localhost:5000
 
 | Thuật toán | Train Acc | Test Acc | Recall | F1 |
 |-----------|-----------|----------|--------|----|
-| **KNN (K=5)** | 89.25% | **90.26%** | 75.00% | 83.87% |
-| Logistic Regression | 88.44% | 90.91% | 84.62% | 86.27% |
-| Random Forest | 100.0% | 92.21% | 84.62% | 88.00% |
-| SVM | 91.69% | 90.91% | 84.62% | 86.27% |
-| Decision Tree | 100.0% | 82.47% | 84.62% | 76.52% |
+| **KNN (K=13)** | 80.94% | **71.43%** | 53.7% | 56.86% |
+| Logistic Regression | 79.48% | 70.13% | 48.15% | 53.06% |
+| Random Forest | 100.0% | 74.03% | 55.56% | 60% |
+| SVM | 84.69% | 74.03% | 55.56% | 60% |
+| Decision Tree | 100.0% | 67.53% | 42.59% | 47.92% |
