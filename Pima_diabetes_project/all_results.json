@@ -1,0 +1,102 @@
+{
+  "KNN": {
+    "train_acc": 80.94,
+    "test_acc": 71.43,
+    "cv_mean": 76.3,
+    "cv_std": 1.16,
+    "precision": 60.42,
+    "recall": 53.7,
+    "f1": 56.86,
+    "auc": 76.36,
+    "cm": [
+      [
+        81,
+        19
+      ],
+      [
+        25,
+        29
+      ]
+    ]
+  },
+  "Logistic Reg.": {
+    "train_acc": 79.48,
+    "test_acc": 70.13,
+    "cv_mean": 76.83,
+    "cv_std": 1.99,
+    "precision": 59.09,
+    "recall": 48.15,
+    "f1": 53.06,
+    "auc": 81.44,
+    "cm": [
+      [
+        82,
+        18
+      ],
+      [
+        28,
+        26
+      ]
+    ]
+  },
+  "Decision Tree": {
+    "train_acc": 100.0,
+    "test_acc": 67.53,
+    "cv_mean": 72.54,
+    "cv_std": 3.07,
+    "precision": 54.76,
+    "recall": 42.59,
+    "f1": 47.92,
+    "auc": 61.8,
+    "cm": [
+      [
+        81,
+        19
+      ],
+      [
+        31,
+        23
+      ]
+    ]
+  },
+  "Random Forest": {
+    "train_acc": 100.0,
+    "test_acc": 74.03,
+    "cv_mean": 75.14,
+    "cv_std": 4.6,
+    "precision": 65.22,
+    "recall": 55.56,
+    "f1": 60.0,
+    "auc": 82.05,
+    "cm": [
+      [
+        84,
+        16
+      ],
+      [
+        24,
+        30
+      ]
+    ]
+  },
+  "SVM": {
+    "train_acc": 84.69,
+    "test_acc": 74.03,
+    "cv_mean": 76.57,
+    "cv_std": 2.83,
+    "precision": 65.22,
+    "recall": 55.56,
+    "f1": 60.0,
+    "auc": 80.04,
+    "cm": [
+      [
+        84,
+        16
+      ],
+      [
+        24,
+        30
+      ]
+    ]
+  }
+}

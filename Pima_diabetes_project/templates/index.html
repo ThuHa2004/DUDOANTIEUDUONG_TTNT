@@ -1,0 +1,997 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dự đoán Bệnh Tiểu Đường — KNN</title>
+<style>
+/* ═══════════════════════════════════════════════════
+   RESET & BASE
+═══════════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:       #0a0e1a;
+  --panel:    #111827;
+  --card:     #1a2235;
+  --border:   #2a3550;
+  --text:     #e2e8f0;
+  --muted:    #64748b;
+  --accent:   #38bdf8;
+  --green:    #4ade80;
+  --red:      #f87171;
+  --yellow:   #fbbf24;
+  --purple:   #a78bfa;
+  --orange:   #fb923c;
+  --font:     'Segoe UI', system-ui, -apple-system, sans-serif;
+  --radius:   10px;
+  --radius-lg:14px;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 14px;
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+/* ═══════════════════════════════════════════════════
+   LAYOUT
+═══════════════════════════════════════════════════ */
+.header {
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  padding: 16px 28px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.header-icon {
+  width: 44px; height: 44px;
+  background: linear-gradient(135deg, #0ea5e9, #6366f1);
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px;
+  flex-shrink: 0;
+}
+.header h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.3px; }
+.header p  { color: var(--muted); font-size: 12px; margin-top: 2px; }
+.header-badges { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }
+
+.badge {
+  background: #0ea5e915; color: var(--accent);
+  border: 1px solid #0ea5e940;
+  border-radius: 20px; padding: 3px 11px;
+  font-size: 11px; font-weight: 600;
+  white-space: nowrap;
+}
+.badge.green { background: #22c55e15; color: var(--green); border-color: #22c55e40; }
+
+/* ─── Nav ───────────────────────────────────────── */
+.nav {
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  padding: 0 28px;
+  display: flex;
+  gap: 0;
+  overflow-x: auto;
+}
+.nav::-webkit-scrollbar { height: 0; }
+.nav-btn {
+  padding: 13px 20px;
+  background: none; border: none;
+  color: var(--muted);
+  cursor: pointer; font-size: 13px; font-weight: 500;
+  border-bottom: 2px solid transparent;
+  transition: all .2s;
+  white-space: nowrap;
+}
+.nav-btn:hover:not(.active) { color: var(--text); }
+.nav-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+/* ─── Main ──────────────────────────────────────── */
+.main { padding: 24px 28px; display: flex; flex-direction: column; gap: 20px; }
+.tab-pane { display: none; }
+.tab-pane.active { display: flex; flex-direction: column; gap: 20px; }
+
+/* ═══════════════════════════════════════════════════
+   GRIDS
+═══════════════════════════════════════════════════ */
+.g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.g3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+.g4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+
+/* ═══════════════════════════════════════════════════
+   CARDS
+═══════════════════════════════════════════════════ */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+}
+.metric {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+}
+.metric-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; margin-bottom: 6px; }
+.metric-value { font-size: 26px; font-weight: 700; line-height: 1.1; }
+.metric-sub   { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+.section-hd {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 16px;
+}
+.section-hd .dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--accent); flex-shrink: 0;
+}
+.section-hd h2 { font-size: 15px; font-weight: 600; }
+
+.info-note {
+  background: var(--panel);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 8px 8px 0;
+  padding: 10px 14px;
+  font-size: 13px; color: var(--muted); line-height: 1.6;
+}
+.info-note strong { color: var(--text); }
+
+/* ═══════════════════════════════════════════════════
+   FORM
+═══════════════════════════════════════════════════ */
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.form-group { display: flex; flex-direction: column; gap: 5px; }
+.form-label { font-size: 12px; color: var(--muted); font-weight: 500; }
+.form-label span { font-weight: 400; }
+.form-input {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 9px 12px;
+  color: var(--text); font-size: 14px; width: 100%;
+  outline: none; transition: border .2s;
+}
+.form-input:focus { border-color: var(--accent); }
+.form-hint { font-size: 11px; color: #475569; }
+
+.btn {
+  padding: 10px 20px; border-radius: 8px;
+  border: none; cursor: pointer;
+  font-size: 14px; font-weight: 600;
+  transition: all .2s;
+}
+.btn-primary {
+  background: linear-gradient(135deg, #0ea5e9, #6366f1);
+  color: #fff;
+}
+.btn-primary:hover { opacity: .88; transform: translateY(-1px); }
+.btn-primary:active { transform: translateY(0); }
+.btn-outline {
+  background: none; border: 1px solid var(--border); color: var(--text);
+}
+.btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+.btn-row { display: flex; gap: 10px; margin-top: 16px; }
+
+/* ═══════════════════════════════════════════════════
+   RESULT BOX
+═══════════════════════════════════════════════════ */
+.result-placeholder {
+  text-align: center; padding: 30px 10px; color: var(--muted);
+}
+.result-placeholder .icon { font-size: 44px; margin-bottom: 12px; }
+.result-box { border-radius: var(--radius-lg); padding: 20px; border: 1px solid; }
+.result-positive { background: #ef44441a; border-color: #ef444440; }
+.result-negative { background: #22c55e1a; border-color: #22c55e40; }
+.result-header   { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.result-icon     { font-size: 38px; }
+.result-title    { font-size: 19px; font-weight: 700; }
+.result-positive .result-title { color: var(--red); }
+.result-negative .result-title { color: var(--green); }
+.result-sub      { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.result-pct      { font-size: 40px; font-weight: 800; line-height: 1; margin: 8px 0 4px; }
+.result-positive .result-pct { color: var(--red); }
+.result-negative .result-pct { color: var(--green); }
+.prob-bar        { height: 10px; background: var(--panel); border-radius: 5px; overflow: hidden; margin: 8px 0; }
+.prob-fill       { height: 100%; border-radius: 5px; transition: width 1s ease; }
+.prob-labels     { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); }
+.result-explain  { margin-top: 12px; padding: 10px 12px; background: #ffffff08; border-radius: 8px; font-size: 12px; color: var(--muted); line-height: 1.6; }
+.result-explain strong { color: var(--text); }
+
+/* ═══════════════════════════════════════════════════
+   FEATURE BARS
+═══════════════════════════════════════════════════ */
+.feat-row {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 9px;
+}
+.feat-name { width: 100px; font-size: 12px; color: var(--muted); }
+.feat-track { flex: 1; height: 7px; background: var(--border); border-radius: 4px; overflow: hidden; }
+.feat-fill  { height: 100%; border-radius: 4px; background: linear-gradient(90deg, #0ea5e9, #6366f1); transition: width .8s; }
+.feat-val   { width: 38px; text-align: right; font-size: 12px; font-weight: 600; }
+
+/* ═══════════════════════════════════════════════════
+   TABLE
+═══════════════════════════════════════════════════ */
+.tbl-wrap { overflow-x: auto; }
+table    { width: 100%; border-collapse: collapse; font-size: 13px; }
+th {
+  background: var(--panel); padding: 10px 14px;
+  text-align: left; color: var(--muted);
+  font-size: 11px; text-transform: uppercase; letter-spacing: .8px;
+  border-bottom: 1px solid var(--border);
+}
+td { padding: 10px 14px; border-bottom: 1px solid #1e293b; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: #ffffff04; }
+tr.highlight td { background: #38bdf808; color: var(--accent); }
+tr.highlight td strong { color: var(--accent); }
+
+.chip {
+  display: inline-block;
+  padding: 2px 9px; border-radius: 10px;
+  font-size: 11px; font-weight: 600;
+}
+.chip-green  { background: #22c55e20; color: #4ade80; }
+.chip-red    { background: #ef444420; color: #f87171; }
+.chip-yellow { background: #f59e0b20; color: #fbbf24; }
+.chip-blue   { background: #0ea5e920; color: #38bdf8; }
+.chip-purple { background: #8b5cf620; color: #a78bfa; }
+
+/* ═══════════════════════════════════════════════════
+   CHART WRAPPERS
+═══════════════════════════════════════════════════ */
+.chart-img { width: 100%; border-radius: 8px; display: block; }
+.chart-loading {
+  display: flex; align-items: center; justify-content: center;
+  height: 240px; color: var(--muted); font-size: 13px;
+  border: 1px dashed var(--border); border-radius: 8px;
+}
+.chart-loading::before { content: '⏳'; margin-right: 8px; font-size: 18px; }
+
+/* ═══════════════════════════════════════════════════
+   CONFUSION MATRIX VISUAL
+═══════════════════════════════════════════════════ */
+.cm-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px; max-width: 340px;
+}
+.cm-cell {
+  border-radius: 8px; padding: 14px;
+  text-align: center; border: 2px solid;
+}
+.cm-cell-val  { font-size: 28px; font-weight: 700; line-height: 1; }
+.cm-cell-lbl  { font-size: 11px; font-weight: 600; margin-top: 2px; }
+.cm-cell-desc { font-size: 10px; color: var(--muted); margin-top: 4px; }
+.cm-tn  { background: #052e16; border-color: #16a34a; }
+.cm-tn  .cm-cell-val { color: var(--green); }
+.cm-tn  .cm-cell-lbl { color: #16a34a; }
+.cm-fp  { background: #431407; border-color: #ea580c; }
+.cm-fp  .cm-cell-val { color: var(--orange); }
+.cm-fp  .cm-cell-lbl { color: #ea580c; }
+.cm-fn  { background: #3b0000; border-color: #dc2626; }
+.cm-fn  .cm-cell-val { color: var(--red); }
+.cm-fn  .cm-cell-lbl { color: #dc2626; }
+.cm-tp  { background: #052e16; border-color: #16a34a; }
+.cm-tp  .cm-cell-val { color: var(--green); }
+.cm-tp  .cm-cell-lbl { color: #16a34a; }
+
+/* ═══════════════════════════════════════════════════
+   RESPONSIVE
+═══════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  .g2, .g3, .g4 { grid-template-columns: 1fr; }
+  .form-grid     { grid-template-columns: 1fr; }
+  .main          { padding: 16px; }
+  .header        { padding: 12px 16px; }
+  .nav           { padding: 0 8px; }
+  .nav-btn       { padding: 10px 12px; font-size: 12px; }
+  .header h1     { font-size: 16px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════
+     HEADER
+═══════════════════════════════════════════════════ -->
+<div class="header">
+  <div class="header-icon">🩺</div>
+  <div>
+    <h1>Hệ thống Dự đoán Bệnh Tiểu Đường</h1>
+    <p>K-Nearest Neighbors (KNN) · Pima Indians Diabetes Dataset · 768 mẫu</p>
+  </div>
+  <div class="header-badges">
+    <span class="badge" id="header-k-badge">KNN K=—</span>
+    <span class="badge green" id="header-acc">Acc: —</span>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     NAV TABS
+═══════════════════════════════════════════════════ -->
+<nav class="nav">
+  <button class="nav-btn active" onclick="switchTab('predict', this)">🔮 Dự đoán</button>
+  <button class="nav-btn" onclick="switchTab('compare', this)">📊 So sánh thuật toán</button>
+  <button class="nav-btn" onclick="switchTab('kparam', this)">📈 Phân tích K</button>
+  <button class="nav-btn" onclick="switchTab('learning', this)">📉 Learning Curve</button>
+  <button class="nav-btn" onclick="switchTab('matrix', this)">🎯 Confusion Matrix</button>
+  <button class="nav-btn" onclick="switchTab('data', this)">🗄 Dữ liệu</button>
+</nav>
+
+<!-- ═══════════════════════════════════════════════════
+     MAIN CONTENT
+═══════════════════════════════════════════════════ -->
+<main class="main">
+
+<!-- ══ TAB 1: DỰ ĐOÁN ══════════════════════════════ -->
+<section id="tab-predict" class="tab-pane active">
+  <div class="g2">
+    <!-- Input form -->
+    <div class="card">
+      <div class="section-hd"><div class="dot"></div><h2>Nhập chỉ số y tế</h2></div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">Pregnancies <span>(lần mang thai)</span></label>
+          <input type="number" id="i-preg" class="form-input" value="2" min="0" max="17">
+          <span class="form-hint">Khoảng: 0 – 17</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Glucose <span>(mg/dL)</span></label>
+          <input type="number" id="i-gluc" class="form-input" value="120" min="70" max="199">
+          <span class="form-hint">Bình thường: 70–99 | Tiểu đường: ≥126</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Blood Pressure <span>(mm Hg)</span></label>
+          <input type="number" id="i-bp" class="form-input" value="70" min="40" max="122">
+          <span class="form-hint">Bình thường: 60–79 mm Hg</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Skin Thickness <span>(mm)</span></label>
+          <input type="number" id="i-skin" class="form-input" value="20" min="5" max="99">
+          <span class="form-hint">Khoảng: 5 – 99 mm</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Insulin <span>(mu U/ml)</span></label>
+          <input type="number" id="i-ins" class="form-input" value="80" min="14" max="846">
+          <span class="form-hint">Bình thường: 16–166 mu U/ml</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">BMI <span>(kg/m²)</span></label>
+          <input type="number" id="i-bmi" class="form-input" value="25.0" step="0.1" min="18" max="67">
+          <span class="form-hint">Bình thường (châu Á): &lt; 23</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">DPF <span>(di truyền tiểu đường)</span></label>
+          <input type="number" id="i-dpf" class="form-input" value="0.350" step="0.001" min="0.078" max="2.42">
+          <span class="form-hint">Khoảng: 0.078 – 2.420</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Age <span>(tuổi)</span></label>
+          <input type="number" id="i-age" class="form-input" value="30" min="21" max="81">
+          <span class="form-hint">Khoảng: 21 – 81</span>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" style="flex:1" onclick="runPredict()">🔍 Phân Tích Nguy Cơ</button>
+        <button class="btn btn-outline" onclick="fillSample(0)">Mẫu thấp</button>
+        <button class="btn btn-outline" onclick="fillSample(1)">Mẫu cao</button>
+      </div>
+    </div>
+
+    <!-- Result + feature importance -->
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <div class="card" id="result-area" style="flex:1">
+        <div class="result-placeholder">
+          <div class="icon">🩺</div>
+          <p>Nhập chỉ số y tế và nhấn<br><strong>Phân Tích Nguy Cơ</strong></p>
+        </div>
+      </div>
+      <div class="card">
+        <div class="section-hd"><div class="dot" style="background:var(--purple)"></div><h2>Mức ảnh hưởng các đặc trưng</h2></div>
+        <div id="feat-bars"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Biểu đồ nguy cơ + so sánh -->
+  <div class="g2" id="predict-charts" style="display:none">
+    <div class="card">
+      <div class="section-hd"><div class="dot"></div><h2>Biểu đồ nguy cơ</h2></div>
+      <img id="chart-risk" class="chart-img" src="" alt="risk chart">
+    </div>
+    <div class="card">
+      <div class="section-hd"><div class="dot" style="background:var(--orange)"></div><h2>So sánh accuracy thuật toán</h2></div>
+      <img id="chart-acc" class="chart-img" src="" alt="accuracy chart">
+    </div>
+  </div>
+
+  <!-- Lịch sử -->
+  <div class="card" id="history-card">
+    <div class="section-hd"><div class="dot" style="background:var(--green)"></div><h2>Lịch sử dự đoán</h2></div>
+    <div id="history-chart-wrap" style="display:none;margin-bottom:16px">
+      <img id="chart-history" class="chart-img" src="" alt="history chart">
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr><th>#</th><th>Thời gian</th><th>Glucose</th><th>BMI</th><th>Age</th><th>Xác suất</th><th>Kết luận</th></tr>
+        </thead>
+        <tbody id="history-tbody">
+          <tr><td colspan="7" style="text-align:center;color:var(--muted);padding:20px">Chưa có lịch sử</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ══ TAB 2: SO SÁNH THUẬT TOÁN ═══════════════════ -->
+<section id="tab-compare" class="tab-pane">
+  <div class="g4">
+    <div class="metric"><div class="metric-label" id="cmp-knn-label">KNN</div><div class="metric-value" style="color:var(--accent)" id="cmp-knn-acc">—</div><div class="metric-sub">Test Accuracy — mô hình chính</div></div>
+    <div class="metric"><div class="metric-label">Random Forest</div><div class="metric-value" style="color:var(--green)" id="cmp-rf-acc">—</div><div class="metric-sub">Test Accuracy — cao nhất</div></div>
+    <div class="metric"><div class="metric-label">SVM</div><div class="metric-value" style="color:var(--purple)" id="cmp-svm-acc">—</div><div class="metric-sub">Test Accuracy</div></div>
+    <div class="metric"><div class="metric-label">Decision Tree</div><div class="metric-value" style="color:var(--red)" id="cmp-dt-acc">—</div><div class="metric-sub">Overfitting (Train=100%)</div></div>
+  </div>
+  <div class="card">
+    <div class="section-hd"><div class="dot"></div><h2>Bảng so sánh chi tiết — Train / Test / CV</h2></div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Thuật toán</th><th>Train Acc</th><th>Test Acc</th>
+            <th>CV (5-fold)</th><th>CV ±Std</th>
+            <th>Precision</th><th>Recall</th><th>F1-Score</th><th>AUC-ROC</th><th>Trạng thái</th>
+          </tr>
+        </thead>
+        <tbody id="compare-tbody">
+          <tr><td colspan="10" style="text-align:center;padding:20px;color:var(--muted)">Đang tải...</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="info-note" style="margin-top:14px">
+      <strong>Nhận xét:</strong>
+      Decision Tree có Train = 100% nhưng Test thấp hơn nhiều — overfitting điển hình.
+      KNN được chọn làm mô hình chính vì sự ổn định qua Cross-Validation, dù Test Accuracy chưa cao nhất.
+      Random Forest cho kết quả toàn diện nhất. Logistic Regression ổn định nhất (CV std thấp nhất).
+    </div>
+  </div>
+</section>
+
+<!-- ══ TAB 3: PHÂN TÍCH K ═══════════════════════════ -->
+<section id="tab-kparam" class="tab-pane">
+  <div class="g4">
+    <div class="metric"><div class="metric-label">K tối ưu</div><div class="metric-value" style="color:var(--green)" id="k-opt-val">—</div><div class="metric-sub" id="k-opt-sub">CV cao + Std thấp nhất</div></div>
+    <div class="metric"><div class="metric-label">Train Acc tại K tối ưu</div><div class="metric-value" style="color:var(--accent)" id="k5-train-acc">—</div><div class="metric-sub">Không overfitting</div></div>
+    <div class="metric"><div class="metric-label">Test Acc tại K tối ưu</div><div class="metric-value" style="color:var(--accent)" id="k5-test-acc">—</div><div class="metric-sub">Tổng quát hóa tốt</div></div>
+    <div class="metric"><div class="metric-label">CV Acc tại K tối ưu</div><div class="metric-value" style="color:var(--yellow)" id="k5-cv-acc">—</div><div class="metric-sub">5-fold Cross Validation</div></div>
+  </div>
+  <div class="card">
+    <div class="section-hd"><div class="dot"></div><h2>Biểu đồ ảnh hưởng tham số K đến hiệu năng KNN</h2></div>
+    <div class="info-note" style="margin-bottom:14px" id="k-info-note">
+      <strong>Overfitting (K=1):</strong> Train=100%, Test thấp — nhạy với nhiễu. &nbsp;|&nbsp;
+      <strong id="k-opt-note-main">K tối ưu:</strong> Cân bằng tốt nhất giữa CV Accuracy và độ ổn định (CV Std thấp). &nbsp;|&nbsp;
+      <strong>Underfitting (K≥15):</strong> Cả Train và Test đều giảm dần.
+    </div>
+    <div id="k-chart-wrap" class="chart-loading">Nhấn tab để tải biểu đồ...</div>
+  </div>
+  <div class="card">
+    <div class="section-hd"><div class="dot" style="background:var(--yellow)"></div><h2>Bảng dữ liệu K = 1 đến 20</h2></div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>K</th><th>Train Acc</th><th>Test Acc</th><th>CV Acc</th><th>CV ±Std</th><th>Gap (Train-Test)</th><th>Đánh giá</th></tr></thead>
+        <tbody id="k-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ══ TAB 4: LEARNING CURVE ════════════════════════ -->
+<section id="tab-learning" class="tab-pane">
+  <div class="g4">
+    <div class="metric"><div class="metric-label">Trạng thái</div><div class="metric-value" style="color:var(--green);font-size:16px">Phù hợp tốt</div><div class="metric-sub">Không over/underfitting</div></div>
+    <div class="metric"><div class="metric-label">Train Acc (100% data)</div><div class="metric-value" style="color:var(--accent)" id="lc-train-acc">—</div><div class="metric-sub">Ổn định</div></div>
+    <div class="metric"><div class="metric-label">CV Acc (100% data)</div><div class="metric-value" style="color:var(--green)" id="lc-cv-acc">—</div><div class="metric-sub">Tốt</div></div>
+    <div class="metric"><div class="metric-label">Xu hướng</div><div class="metric-value" style="color:var(--yellow)">Hội tụ</div><div class="metric-sub">Đường cong ổn định</div></div>
+  </div>
+  <div class="card">
+    <div class="section-hd"><div class="dot"></div><h2 id="lc-title">Learning Curve — KNN theo kích thước tập huấn luyện</h2></div>
+    <div class="info-note" style="margin-bottom:14px">
+      <strong>Chú ý:</strong> KNN là lazy learning — không có epochs. Learning Curve thể hiện Accuracy theo
+      <strong>số lượng mẫu huấn luyện tăng dần</strong>. Khi hai đường gần nhau và ổn định → mô hình tốt.
+    </div>
+    <div id="lc-chart-wrap" class="chart-loading">Nhấn tab để tải biểu đồ...</div>
+  </div>
+</section>
+
+<!-- ══ TAB 5: CONFUSION MATRIX ══════════════════════ -->
+<section id="tab-matrix" class="tab-pane">
+  <div class="g4">
+    <div class="metric"><div class="metric-label">True Positive (TP)</div><div class="metric-value" style="color:var(--green)" id="cm-tp">—</div><div class="metric-sub">Mắc bệnh — dự đúng</div></div>
+    <div class="metric"><div class="metric-label">True Negative (TN)</div><div class="metric-value" style="color:var(--green)" id="cm-tn">—</div><div class="metric-sub">Không mắc — dự đúng</div></div>
+    <div class="metric"><div class="metric-label">False Negative (FN)</div><div class="metric-value" style="color:var(--red)" id="cm-fn">—</div><div class="metric-sub">⚠ Bỏ sót ca bệnh</div></div>
+    <div class="metric"><div class="metric-label">False Positive (FP)</div><div class="metric-value" style="color:var(--yellow)" id="cm-fp">—</div><div class="metric-sub">Cảnh báo nhầm</div></div>
+  </div>
+
+  <div class="g2">
+    <div class="card">
+      <div class="section-hd"><div class="dot"></div><h2 id="cm-title">Confusion Matrix — KNN · Tập Test n=154</h2></div>
+      <div style="margin-bottom:10px;font-size:12px;color:var(--muted)">
+        <span style="margin-right:16px">← Dự đoán →</span>
+      </div>
+      <div style="display:flex;gap:6px;align-items:stretch">
+        <div style="writing-mode:vertical-lr;transform:rotate(180deg);font-size:12px;color:var(--muted);padding-right:6px;text-align:center">← Thực tế →</div>
+        <div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:4px;font-size:11px;color:var(--muted);text-align:center">
+            <div>Pred: Không mắc (0)</div><div>Pred: Mắc bệnh (1)</div>
+          </div>
+          <div class="cm-grid" id="cm-grid-knn">
+            <div class="cm-cell cm-tn">
+              <div class="cm-cell-val" id="cm-cell-tn">—</div>
+              <div class="cm-cell-lbl" id="cm-cell-tn-pct">TN</div>
+              <div class="cm-cell-desc">Không mắc → Đúng</div>
+            </div>
+            <div class="cm-cell cm-fp">
+              <div class="cm-cell-val" id="cm-cell-fp">—</div>
+              <div class="cm-cell-lbl" id="cm-cell-fp-pct">FP</div>
+              <div class="cm-cell-desc">Không mắc → Sai</div>
+            </div>
+            <div class="cm-cell cm-fn">
+              <div class="cm-cell-val" id="cm-cell-fn">—</div>
+              <div class="cm-cell-lbl" id="cm-cell-fn-pct">FN</div>
+              <div class="cm-cell-desc">Mắc bệnh → Bỏ sót!</div>
+            </div>
+            <div class="cm-cell cm-tp">
+              <div class="cm-cell-val" id="cm-cell-tp">—</div>
+              <div class="cm-cell-lbl" id="cm-cell-tp-pct">TP</div>
+              <div class="cm-cell-desc">Mắc bệnh → Đúng</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="info-note" style="margin-top:14px" id="cm-recall-note">
+        Đang tải dữ liệu...
+      </div>
+    </div>
+    <div class="card">
+      <div class="section-hd"><div class="dot" style="background:var(--green)"></div><h2>Biểu đồ Confusion Matrix — 5 thuật toán</h2></div>
+      <div id="cm-chart-wrap" class="chart-loading">Nhấn tab để tải biểu đồ...</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-hd"><div class="dot" style="background:var(--yellow)"></div><h2>Phân tích các loại lỗi</h2></div>
+    <div class="g2">
+      <div class="info-note" style="border-color:var(--red)">
+        <strong style="color:var(--red)">False Negative (FN) — Nguy hiểm nhất!</strong><br>
+        Bệnh nhân thực sự mắc tiểu đường nhưng mô hình dự đoán "Không mắc".
+        Hậu quả: không được điều trị kịp thời → biến chứng nghiêm trọng (mù lòa, suy thận, cắt cụt chi).<br><br>
+        <strong>KNN: FN=<span id="err-knn-fn">—</span></strong> → Recall=<span id="err-knn-recall">—</span>% &nbsp; | &nbsp; <strong>RF: FN=<span id="err-rf-fn">—</span></strong> → Recall=<span id="err-rf-recall">—</span>%
+      </div>
+      <div class="info-note" style="border-color:var(--yellow)">
+        <strong style="color:var(--yellow)">False Positive (FP) — Chấp nhận được</strong><br>
+        Người khỏe mạnh bị dự đoán "Mắc bệnh". Hậu quả: lo lắng không cần thiết nhưng
+        có thể xác nhận bằng xét nghiệm chính thức.<br><br>
+        <strong>KNN: FP=<span id="err-knn-fp">—</span></strong> → Precision=<strong id="err-knn-precision">—</strong><br>
+        Khi KNN cảnh báo dương tính, kiểm tra độ tin cậy qua chỉ số Precision.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ TAB 6: DỮ LIỆU ═══════════════════════════════ -->
+<section id="tab-data" class="tab-pane">
+  <div class="g4">
+    <div class="metric"><div class="metric-label">Tổng mẫu</div><div class="metric-value">768</div><div class="metric-sub">Pima Indians Diabetes</div></div>
+    <div class="metric"><div class="metric-label">Số đặc trưng</div><div class="metric-value">8</div><div class="metric-sub">Chỉ số y tế</div></div>
+    <div class="metric"><div class="metric-label">Tập Train (80%)</div><div class="metric-value" style="color:var(--accent)">614</div><div class="metric-sub">mẫu · random_state=42</div></div>
+    <div class="metric"><div class="metric-label">Tập Test (20%)</div><div class="metric-value" style="color:var(--yellow)">154</div><div class="metric-sub">mẫu · stratify=y</div></div>
+  </div>
+  <div class="card">
+    <div class="section-hd"><div class="dot" style="background:var(--yellow)"></div><h2>Thống kê mô tả 8 đặc trưng</h2></div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr><th>#</th><th>Đặc trưng</th><th>Đơn vị</th><th>Min</th><th>Max</th><th>Mean</th><th>Std</th><th>Tương quan</th><th>Giá trị 0 bất thường</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>1</td><td><strong>Glucose</strong></td><td>mg/dL</td><td>0</td><td>199</td><td>120.9</td><td>31.97</td><td><span class="chip chip-red">0.467 🔥 Quan trọng nhất</span></td><td>5 (0.65%)</td></tr>
+          <tr><td>2</td><td>BMI</td><td>kg/m²</td><td>0</td><td>67.1</td><td>31.99</td><td>7.88</td><td><span class="chip chip-yellow">0.293</span></td><td>11 (1.43%)</td></tr>
+          <tr><td>3</td><td>Age</td><td>năm</td><td>21</td><td>81</td><td>33.24</td><td>11.76</td><td><span class="chip chip-yellow">0.238</span></td><td>0</td></tr>
+          <tr><td>4</td><td>Pregnancies</td><td>lần</td><td>0</td><td>17</td><td>3.85</td><td>3.37</td><td><span class="chip chip-yellow">0.222</span></td><td>0</td></tr>
+          <tr><td>5</td><td>DPF</td><td>—</td><td>0.078</td><td>2.42</td><td>0.472</td><td>0.331</td><td>0.174</td><td>0</td></tr>
+          <tr><td>6</td><td>Insulin</td><td>mu U/ml</td><td>0</td><td>846</td><td>79.8</td><td>115.2</td><td>0.131</td><td><span class="chip chip-red">374 (48.7%!)</span></td></tr>
+          <tr><td>7</td><td>SkinThickness</td><td>mm</td><td>0</td><td>99</td><td>20.5</td><td>15.95</td><td>0.075</td><td>227 (29.6%)</td></tr>
+          <tr><td>8</td><td>BloodPressure</td><td>mm Hg</td><td>0</td><td>122</td><td>69.1</td><td>19.36</td><td>0.065</td><td>35 (4.56%)</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="info-note" style="margin-top:14px">
+      <strong>Phân bố nhãn:</strong> Outcome=0 (Không mắc): 500 mẫu (65.1%) &nbsp;|&nbsp; Outcome=1 (Mắc bệnh): 268 mẫu (34.9%)<br>
+      <strong>Xử lý giá trị 0:</strong> Các cột Glucose, BloodPressure, SkinThickness, Insulin, BMI — thay bằng mean của cột đó.
+    </div>
+  </div>
+</section>
+
+</main><!-- .main -->
+
+<!-- ═══════════════════════════════════════════════════
+     JAVASCRIPT
+═══════════════════════════════════════════════════ -->
+<script>
+// ── Tab switching ────────────────────────────────────────
+const loaded = {};
+function switchTab(id, btn) {
+  document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  btn.classList.add('active');
+  if (!loaded[id]) { loaded[id] = true; loadTabContent(id); }
+}
+
+function loadTabContent(id) {
+  if (id === 'compare') loadCompareTable();
+  if (id === 'kparam')  loadKChart();
+  if (id === 'learning') loadLCChart();
+  if (id === 'matrix')  loadCMChart();
+}
+
+// ── Init: load header accuracy + CM stats + K tối ưu ───
+async function initPage() {
+  try {
+    // 1. Load results table → header acc + CM data
+    const res  = await fetch('/results/table');
+    const data = await res.json();
+    const knn  = data.rows.find(r => r.name === 'KNN');
+    if (knn) {
+      document.getElementById('header-acc').textContent = `Acc: ${knn.test_acc}%`;
+    }
+    loadCMData(data.rows);
+
+    // 2. Load K table → tìm K tối ưu (CV_mean - CV_std lớn nhất)
+    const kRes  = await fetch('/results/k-table');
+    const kData = await kRes.json();
+    const bestK = kData.rows.reduce((best, r) =>
+      (r.cv_mean - r.cv_std) > (best.cv_mean - best.cv_std) ? r : best
+    );
+    const K = bestK.k;
+    window._knnK = K;  // lưu để dùng trong renderResult
+
+    // Cập nhật header badge
+    document.getElementById('header-k-badge').textContent = `KNN K=${K}`;
+
+    // Cập nhật tab Phân tích K
+    document.getElementById('k-opt-val').textContent      = `K = ${K}`;
+    document.getElementById('k5-train-acc').textContent   = `${bestK.train_acc}%`;
+    document.getElementById('k5-test-acc').textContent    = `${bestK.test_acc}%`;
+    document.getElementById('k5-cv-acc').textContent      = `${bestK.cv_mean}%`;
+    document.getElementById('k-opt-note-main').textContent = `K=${K} (tối ưu):`;
+
+    // Cập nhật tiêu đề Learning Curve và Confusion Matrix
+    document.getElementById('lc-title').textContent =
+      `Learning Curve — KNN (K=${K}) theo kích thước tập huấn luyện`;
+    document.getElementById('cm-title').textContent =
+      `Confusion Matrix — KNN (K=${K}) · Tập Test n=154`;
+
+  } catch(e) { console.warn('Init load failed:', e); }
+}
+
+// ── Load Confusion Matrix data động ──────────────────────
+function loadCMData(rows) {
+  const knn = rows.find(r => r.name === 'KNN');
+  const rf  = rows.find(r => r.name === 'Random Forest');
+  if (!knn) return;
+  const cm   = knn.cm;  // [[TN,FP],[FN,TP]]
+  const tn   = cm[0][0], fp = cm[0][1], fn_ = cm[1][0], tp = cm[1][1];
+  const total = tn + fp + fn_ + tp;
+  const recall    = (tp / (tp + fn_) * 100).toFixed(1);
+  const precision = (tp / (tp + fp)  * 100).toFixed(1);
+
+  // Metric cards
+  document.getElementById('cm-tp').textContent = tp;
+  document.getElementById('cm-tn').textContent = tn;
+  document.getElementById('cm-fn').textContent = fn_;
+  document.getElementById('cm-fp').textContent = fp;
+
+  // Grid cells
+  document.getElementById('cm-cell-tn').textContent     = tn;
+  document.getElementById('cm-cell-tn-pct').textContent = `TN — ${(tn/total*100).toFixed(1)}%`;
+  document.getElementById('cm-cell-fp').textContent     = fp;
+  document.getElementById('cm-cell-fp-pct').textContent = `FP — ${(fp/total*100).toFixed(1)}%`;
+  document.getElementById('cm-cell-fn').textContent     = fn_;
+  document.getElementById('cm-cell-fn-pct').textContent = `FN — ${(fn_/total*100).toFixed(1)}%`;
+  document.getElementById('cm-cell-tp').textContent     = tp;
+  document.getElementById('cm-cell-tp-pct').textContent = `TP — ${(tp/total*100).toFixed(1)}%`;
+
+  // Recall note
+  document.getElementById('cm-recall-note').innerHTML =
+    `<strong>FN = ${fn_}</strong> — ${fn_} bệnh nhân thực sự mắc bệnh nhưng bị bỏ sót →
+     Recall = ${tp}/(${tp}+${fn_}) = <strong>${recall}%</strong>. Đây là điểm cần cải thiện.`;
+
+  // Error analysis section
+  document.getElementById('err-knn-fn').textContent      = fn_;
+  document.getElementById('err-knn-recall').textContent  = recall;
+  document.getElementById('err-knn-fp').textContent      = fp;
+  document.getElementById('err-knn-precision').textContent = `${precision}%`;
+  if (rf) {
+    const rfcm = rf.cm;
+    const rf_fn = rfcm[1][0], rf_tp = rfcm[1][1];
+    const rf_recall = (rf_tp / (rf_tp + rf_fn) * 100).toFixed(1);
+    document.getElementById('err-rf-fn').textContent     = rf_fn;
+    document.getElementById('err-rf-recall').textContent = rf_recall;
+  }
+}
+
+initPage();
+
+// ── Feature importance bars ───────────────────────────────
+const FEAT_WEIGHTS = {
+  Pregnancies: 0.222, Glucose: 0.467, BloodPressure: 0.065,
+  SkinThickness: 0.075, Insulin: 0.131, BMI: 0.293,
+  DPF: 0.174, Age: 0.238
+};
+function renderFeatBars() {
+  const sorted = Object.entries(FEAT_WEIGHTS).sort((a, b) => b[1] - a[1]);
+  document.getElementById('feat-bars').innerHTML = sorted.map(([k, w]) => `
+    <div class="feat-row">
+      <div class="feat-name">${k}</div>
+      <div class="feat-track"><div class="feat-fill" style="width:${w * 200}%"></div></div>
+      <div class="feat-val" style="color:var(--text)">${(w * 100).toFixed(0)}%</div>
+    </div>`).join('');
+}
+renderFeatBars();
+
+// ── Predict ───────────────────────────────────────────────
+async function runPredict() {
+  const payload = {
+    pregnancies:    document.getElementById('i-preg').value,
+    glucose:        document.getElementById('i-gluc').value,
+    bloodpressure:  document.getElementById('i-bp').value,
+    skin:           document.getElementById('i-skin').value,
+    insulin:        document.getElementById('i-ins').value,
+    bmi:            document.getElementById('i-bmi').value,
+    dpf:            document.getElementById('i-dpf').value,
+    age:            document.getElementById('i-age').value,
+  };
+
+  const resultArea = document.getElementById('result-area');
+  resultArea.innerHTML = '<div class="result-placeholder"><div class="icon">⏳</div><p>Đang phân tích...</p></div>';
+
+  try {
+    const res  = await fetch('/predict', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    renderResult(data);
+    renderCharts(data);
+    renderHistory(data.history, payload);
+  } catch (e) {
+    resultArea.innerHTML = '<div class="result-placeholder"><div class="icon">❌</div><p>Lỗi kết nối server</p></div>';
+  }
+}
+
+function renderResult(data) {
+  const isPos  = data.outcome === 1;
+  const pct    = data.percent;
+  const fillGrad = isPos
+    ? 'linear-gradient(90deg,#f87171,#ef4444)'
+    : 'linear-gradient(90deg,#4ade80,#16a34a)';
+  const kVal      = window._knnK || 11;
+  const neighbors = Math.round(data.percent / 100 * kVal);
+
+  document.getElementById('result-area').className =
+    'card result-box ' + (isPos ? 'result-positive' : 'result-negative');
+  document.getElementById('result-area').innerHTML = `
+    <div class="result-header">
+      <div class="result-icon">${isPos ? '⚠️' : '✅'}</div>
+      <div>
+        <div class="result-title">${isPos ? 'Có nguy cơ mắc bệnh' : 'Không có nguy cơ mắc bệnh'}</div>
+        <div class="result-sub">KNN K=${kVal} · Phân tích ${isPos ? 'tích cực' : 'âm tính'}</div>
+      </div>
+    </div>
+    <div class="result-pct">${pct}%</div>
+    <div style="font-size:13px;color:var(--muted)">Xác suất mắc bệnh tiểu đường</div>
+    <div class="prob-bar"><div class="prob-fill" style="width:${pct}%;background:${fillGrad}"></div></div>
+    <div class="prob-labels"><span>0%</span><span>Ngưỡng 50%</span><span>100%</span></div>
+    <div class="result-explain">
+      <strong>Giải thích KNN:</strong> Trong ${kVal} bệnh nhân tương đồng nhất,
+      <strong>${neighbors} người</strong> có Outcome=1 → Xác suất ${pct}%<br>
+      ${isPos
+        ? '<span style="color:var(--yellow)">⚠ Khuyến nghị: Nên tham khảo ý kiến bác sĩ chuyên khoa nội tiết.</span>'
+        : '<span style="color:var(--green)">✓ Duy trì lối sống lành mạnh và kiểm tra định kỳ.</span>'}
+    </div>`;
+}
+
+function renderCharts(data) {
+  document.getElementById('predict-charts').style.display = 'grid';
+  document.getElementById('chart-risk').src = 'data:image/png;base64,' + data.chart1;
+  document.getElementById('chart-acc').src  = 'data:image/png;base64,' + data.chart2;
+  document.getElementById('history-chart-wrap').style.display = 'block';
+  document.getElementById('chart-history').src = 'data:image/png;base64,' + data.chart3;
+}
+
+let histCount = 0;
+function renderHistory(history, payload) {
+  histCount++;
+  const tbody = document.getElementById('history-tbody');
+  const rows  = history.slice().reverse().slice(0, 10);
+  tbody.innerHTML = rows.map((r, i) => `
+    <tr>
+      <td>${history.length - i}</td>
+      <td>${r.time}</td>
+      <td>${payload.glucose}</td>
+      <td>${parseFloat(payload.bmi).toFixed(1)}</td>
+      <td>${payload.age}</td>
+      <td><strong style="color:${parseFloat(r.risk)>=50?'var(--red)':'var(--green)'}">${parseFloat(r.risk).toFixed(2)}%</strong></td>
+      <td><span class="chip ${r.outcome==1?'chip-red':'chip-green'}">${r.outcome==1?'Mắc bệnh':'Không mắc'}</span></td>
+    </tr>`).join('');
+}
+
+// ── Sample data ───────────────────────────────────────────
+function fillSample(type) {
+  if (type === 0) {
+    document.getElementById('i-preg').value = 1;
+    document.getElementById('i-gluc').value = 90;
+    document.getElementById('i-bp').value   = 70;
+    document.getElementById('i-skin').value = 18;
+    document.getElementById('i-ins').value  = 75;
+    document.getElementById('i-bmi').value  = 23.5;
+    document.getElementById('i-dpf').value  = 0.180;
+    document.getElementById('i-age').value  = 27;
+  } else {
+    document.getElementById('i-preg').value = 7;
+    document.getElementById('i-gluc').value = 168;
+    document.getElementById('i-bp').value   = 90;
+    document.getElementById('i-skin').value = 42;
+    document.getElementById('i-ins').value  = 330;
+    document.getElementById('i-bmi').value  = 39.2;
+    document.getElementById('i-dpf').value  = 0.920;
+    document.getElementById('i-age').value  = 54;
+  }
+  runPredict();
+}
+
+// ── Compare table ─────────────────────────────────────────
+async function loadCompareTable() {
+  const res  = await fetch('/results/table');
+  const data = await res.json();
+  const chipMap = {
+    'KNN':           '<span class="chip chip-blue">Mô hình chính</span>',
+    'Logistic Reg.': '<span class="chip chip-green">Ổn định nhất</span>',
+    'Decision Tree': '<span class="chip chip-red">Overfitting</span>',
+    'Random Forest': '<span class="chip chip-green">Acc cao nhất</span>',
+    'SVM':           '<span class="chip chip-purple">Tốt</span>',
+  };
+
+  const kVal = window._knnK || '—';
+
+  // Cập nhật label KNN trong metric card
+  const knnLabel = document.getElementById('cmp-knn-label');
+  if (knnLabel) knnLabel.textContent = `KNN (K=${kVal})`;
+
+  // Fill metric cards + header badge
+  data.rows.forEach(r => {
+    if (r.name === 'KNN') {
+      document.getElementById('header-acc').textContent  = `Acc: ${r.test_acc}%`;
+      document.getElementById('cmp-knn-acc').textContent = `${r.test_acc}%`;
+    }
+    if (r.name === 'Random Forest') document.getElementById('cmp-rf-acc').textContent  = `${r.test_acc}%`;
+    if (r.name === 'SVM')           document.getElementById('cmp-svm-acc').textContent = `${r.test_acc}%`;
+    if (r.name === 'Decision Tree') document.getElementById('cmp-dt-acc').textContent  = `${r.test_acc}%`;
+  });
+
+  document.getElementById('compare-tbody').innerHTML = data.rows.map(r => {
+    const rowName = r.name === 'KNN' ? `KNN (K=${kVal})` : r.name;
+    return `
+    <tr class="${r.name === 'KNN' ? 'highlight' : ''}">
+      <td><strong>${r.name === 'KNN' ? '⭐ ' : ''}${rowName}</strong></td>
+      <td>${r.train_acc}%</td>
+      <td>${r.test_acc}%</td>
+      <td>${r.cv_mean}%</td>
+      <td>±${r.cv_std}%</td>
+      <td><span class="chip ${r.precision >= 90 ? 'chip-green' : r.precision >= 70 ? 'chip-yellow' : 'chip-red'}">${r.precision}%</span></td>
+      <td><span class="chip ${r.recall >= 80 ? 'chip-green' : r.recall >= 60 ? 'chip-yellow' : 'chip-red'}">${r.recall}%</span></td>
+      <td>${r.f1}%</td>
+      <td>${r.auc}%</td>
+      <td>${chipMap[r.name] || ''}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── K chart ───────────────────────────────────────────────
+async function loadKChart() {
+  const wrap = document.getElementById('k-chart-wrap');
+  wrap.className = 'chart-loading';
+  wrap.innerHTML = '';
+  const res  = await fetch('/chart/k-analysis');
+  const data = await res.json();
+  wrap.className = '';
+  wrap.innerHTML = `<img class="chart-img" src="data:image/png;base64,${data.chart}" alt="K analysis">`;
+  loadKTable();
+}
+
+async function loadKTable() {
+  const kRes  = await fetch('/results/k-table');
+  const kData = await kRes.json();
+
+  // Tìm K tối ưu động: cv_mean - cv_std lớn nhất
+  const bestK = kData.rows.reduce((best, r) =>
+    (r.cv_mean - r.cv_std) > (best.cv_mean - best.cv_std) ? r : best
+  );
+  const OPT_K = bestK.k;
+
+  // Cập nhật metric cards
+  document.getElementById('k-opt-val').textContent    = `K = ${OPT_K}`;
+  document.getElementById('k5-train-acc').textContent = `${bestK.train_acc}%`;
+  document.getElementById('k5-test-acc').textContent  = `${bestK.test_acc}%`;
+  document.getElementById('k5-cv-acc').textContent    = `${bestK.cv_mean}%`;
+  document.getElementById('k-opt-note-main').textContent = `K=${OPT_K} (tối ưu):`;
+
+  const tbody = document.getElementById('k-tbody');
+  tbody.innerHTML = kData.rows.map(r => {
+    const gap     = (r.train_acc - r.test_acc).toFixed(1);
+    const isOpt   = r.k === OPT_K;
+    const gapChip = parseFloat(gap) > 10 ? 'chip-red' : parseFloat(gap) > 5 ? 'chip-yellow' : 'chip-green';
+    const note    = r.k === 1     ? 'Overfitting nặng'
+                  : r.k <= 3      ? 'Overfitting'
+                  : r.k === OPT_K ? '✓ Tối ưu'
+                  : r.k >= 15     ? 'Underfitting'
+                  : 'Chấp nhận';
+    const noteChip = r.k === OPT_K ? 'chip-green'
+                   : r.k <= 3      ? 'chip-red'
+                   : r.k >= 15     ? 'chip-yellow' : '';
+    return `<tr style="${isOpt ? 'background:#38bdf808' : ''}">
+      <td>${isOpt ? `<strong style="color:var(--accent)">K=${r.k} ★</strong>` : `K=${r.k}`}</td>
+      <td>${r.train_acc.toFixed(2)}%</td>
+      <td>${isOpt ? `<strong style="color:var(--green)">${r.test_acc.toFixed(2)}%</strong>` : r.test_acc.toFixed(2) + '%'}</td>
+      <td>${r.cv_mean.toFixed(2)}%</td>
+      <td>±${r.cv_std.toFixed(2)}%</td>
+      <td><span class="chip ${gapChip}">${gap}%</span></td>
+      <td><span class="chip ${noteChip}">${note}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Learning curve chart ──────────────────────────────────
+async function loadLCChart() {
+  const wrap = document.getElementById('lc-chart-wrap');
+  wrap.className = 'chart-loading';
+  wrap.innerHTML = '';
+  const res  = await fetch('/chart/learning-curve');
+  const data = await res.json();
+  wrap.className = '';
+  wrap.innerHTML = `<img class="chart-img" src="data:image/png;base64,${data.chart}" alt="Learning Curve">`;
+
+  // Fill metric cards from learning_curve data
+  try {
+    const lcRes  = await fetch('/results/learning-curve');
+    const lcData = await lcRes.json();
+    document.getElementById('lc-train-acc').textContent = `${lcData.train_mean_last}%`;
+    document.getElementById('lc-cv-acc').textContent    = `${lcData.test_mean_last}%`;
+  } catch(e) {}
+}
+
+// ── Confusion matrix chart ────────────────────────────────
+async function loadCMChart() {
+  const wrap = document.getElementById('cm-chart-wrap');
+  wrap.className = 'chart-loading';
+  wrap.innerHTML = '';
+  const res  = await fetch('/chart/confusion-matrix');
+  const data = await res.json();
+  wrap.className = '';
+  wrap.innerHTML = `<img class="chart-img" src="data:image/png;base64,${data.chart}" alt="Confusion Matrix">`;
+}
+</script>
+
+</body>
+</html>

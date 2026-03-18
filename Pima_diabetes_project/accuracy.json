@@ -1,0 +1,7 @@
+{
+  "KNN": 0.7143,
+  "Logistic Reg.": 0.7013,
+  "Decision Tree": 0.6753,
+  "Random Forest": 0.7403,
+  "SVM": 0.7403
+}

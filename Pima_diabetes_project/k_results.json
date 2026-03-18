@@ -1,0 +1,122 @@
+{
+  "1": {
+    "train_acc": 100.0,
+    "test_acc": 68.83,
+    "cv_mean": 68.89,
+    "cv_std": 2.86
+  },
+  "2": {
+    "train_acc": 84.53,
+    "test_acc": 71.43,
+    "cv_mean": 71.1,
+    "cv_std": 2.93
+  },
+  "3": {
+    "train_acc": 84.85,
+    "test_acc": 71.43,
+    "cv_mean": 73.7,
+    "cv_std": 2.21
+  },
+  "4": {
+    "train_acc": 81.92,
+    "test_acc": 70.13,
+    "cv_mean": 73.7,
+    "cv_std": 2.08
+  },
+  "5": {
+    "train_acc": 83.55,
+    "test_acc": 68.83,
+    "cv_mean": 75.52,
+    "cv_std": 2.23
+  },
+  "6": {
+    "train_acc": 81.92,
+    "test_acc": 69.48,
+    "cv_mean": 74.87,
+    "cv_std": 2.63
+  },
+  "7": {
+    "train_acc": 81.92,
+    "test_acc": 68.83,
+    "cv_mean": 75.52,
+    "cv_std": 1.18
+  },
+  "8": {
+    "train_acc": 80.29,
+    "test_acc": 72.73,
+    "cv_mean": 74.35,
+    "cv_std": 2.09
+  },
+  "9": {
+    "train_acc": 80.46,
+    "test_acc": 72.08,
+    "cv_mean": 75.27,
+    "cv_std": 3.11
+  },
+  "10": {
+    "train_acc": 80.13,
+    "test_acc": 72.08,
+    "cv_mean": 74.61,
+    "cv_std": 0.97
+  },
+  "11": {
+    "train_acc": 80.78,
+    "test_acc": 70.78,
+    "cv_mean": 75.78,
+    "cv_std": 1.72
+  },
+  "12": {
+    "train_acc": 80.29,
+    "test_acc": 71.43,
+    "cv_mean": 75.26,
+    "cv_std": 1.75
+  },
+  "13": {
+    "train_acc": 80.94,
+    "test_acc": 71.43,
+    "cv_mean": 76.3,
+    "cv_std": 1.16
+  },
+  "14": {
+    "train_acc": 79.64,
+    "test_acc": 73.38,
+    "cv_mean": 75.39,
+    "cv_std": 1.98
+  },
+  "15": {
+    "train_acc": 80.46,
+    "test_acc": 73.38,
+    "cv_mean": 76.95,
+    "cv_std": 2.09
+  },
+  "16": {
+    "train_acc": 80.29,
+    "test_acc": 72.08,
+    "cv_mean": 76.56,
+    "cv_std": 1.95
+  },
+  "17": {
+    "train_acc": 80.94,
+    "test_acc": 72.73,
+    "cv_mean": 76.83,
+    "cv_std": 1.89
+  },
+  "18": {
+    "train_acc": 79.97,
+    "test_acc": 72.08,
+    "cv_mean": 75.52,
+    "cv_std": 1.99
+  },
+  "19": {
+    "train_acc": 81.43,
+    "test_acc": 72.73,
+    "cv_mean": 76.83,
+    "cv_std": 2.54
+  },
+  "20": {
+    "train_acc": 80.46,
+    "test_acc": 73.38,
+    "cv_mean": 76.31,
+    "cv_std": 2.57
+  }
+}
