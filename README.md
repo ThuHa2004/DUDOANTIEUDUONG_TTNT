@@ -1,5 +1,8 @@
 # 🩺 Hệ thống Dự đoán Bệnh Tiểu Đường
-
+---
+### Link youtube: https://youtu.be/h8MbjDCTJiI 
+### Link tải dataset Pima Indians Diabetes Dataset: https://www.kaggle.com/datasets/whenamancodes/predict-diabities
+---
 **Thuật toán chính:** K-Nearest Neighbors (KNN, K=13)  
 **Dataset:** Pima Indians Diabetes Dataset (768 mẫu, 8 đặc trưng)  
 **Test Accuracy:** 71.43%
